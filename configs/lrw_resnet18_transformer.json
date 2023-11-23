@@ -1,0 +1,6 @@
+{
+    "backbone_type": "resnet",
+    "relu_type": "swish",
+    "width_mult": 1.0,
+    "use_boundary": false
+}
