@@ -89,24 +89,6 @@ class DenseTCN(nn.Module):
         return self.tcn_output(x)
 
 
-class TransformerBackend(nn.Module):
-    def __init__(self, input_size, num_channels, num_classes):
-        super(TransformerBackend, self).__init__()
-        encoder_layer = torch.nn.TransformerEncoderLayer(d_model=num_channels, nhead=8)
-        self.encoder = torch.nn.TransformerEncoder(encoder_layer, num_layers=6)
-        self.tf_output = nn.Linear(num_channels, num_classes)
-
-    def forward(self, x, lengths, B):
-        # x: (B, 29, C)
-        # masks = make_non_pad_mask(lengths)
-        x = x.permute(1, 0, 2)
-        x = self.pos_enc(x)
-        x = self.encoder(x)
-        x = x.mean(0)
-        x = self.tf_output(x)
-        return x
-
-
 class ResNetAdapter(nn.Module):
     def __init__(self, channel, reduction=2):
         super(ResNetAdapter, self).__init__()
@@ -184,8 +166,6 @@ class LipreadingForAdapter(nn.Module):
                                 relu_type=relu_type,
                                 squeeze_excitation=densetcn_options['squeeze_excitation'],
                                 )
-        else:
-            self.tcn = TransformerBackend(input_size=self.backend_out, num_channels=512, num_classes=num_classes)
         self.adapter1 = ResNetAdapter(channel=512, reduction=32)
         self.training_params = []
         self.training_tensors = []
@@ -200,7 +180,7 @@ class LipreadingForAdapter(nn.Module):
     def forward(self, x, lengths, boundaries=None):
         B, C, T, H, W = x.size()
         x = self.frontend3D(x)
-        Tnew = x.shape[2]  # outpu should be B x C2 x Tnew x H x W
+        Tnew = x.shape[2]  # output should be B x C2 x Tnew x H x W
         x = threeD_to_2D_tensor(x)
 
         x = self.trunk(x)
