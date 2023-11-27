@@ -1,2 +1,5 @@
 # AdaptiveLipreading
-Official implement of SPEAKER-ADAPTIVE LIPREADING VIA SPATIO-TEMPORAL INFORMATION LEARNING. The training code will be released once the paper is accepted.
+Official implement of SPEAKER-ADAPTIVE LIPREADING VIA SPATIO-TEMPORAL INFORMATION LEARNING.
+### Usage 
+- Baseline training: `python grid_main.py`
+- Speaker-adaptive training: `python grid_main.py --subject 20 --adapt_min 5 --fold 1`
