@@ -190,7 +190,8 @@ class LipreadingForAdapter(nn.Module):
         self.training_params = []
         self.training_tensors = []
         for name, param in self.named_parameters():
-            if "adapter" not in name and "lora_" not in name and "transition1.norm" not in name and "transition2.norm" not in name and "transition3.norm" not in name:
+            # if "adapter" not in name and "lora_" not in name and "transition1.norm" not in name and "transition2.norm" not in name and "transition3.norm" not in name:
+            if "adapter" not in name and "lora_" not in name:
                 param.requires_grad = False
             else:
                 self.training_params.append(name)
