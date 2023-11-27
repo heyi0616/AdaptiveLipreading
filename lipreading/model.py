@@ -87,25 +87,6 @@ class DenseTCN(nn.Module):
         return self.tcn_output(x)
 
 
-class TransformerBackend(nn.Module):
-    def __init__(self, input_size, num_channels, num_classes):
-        super(TransformerBackend, self).__init__()
-        # self.pos_enc = PositionalEncoding(emb_size=input_size)
-        encoder_layer = torch.nn.TransformerEncoderLayer(d_model=num_channels, nhead=8)
-        self.encoder = torch.nn.TransformerEncoder(encoder_layer, num_layers=6)
-        self.tf_output = nn.Linear(num_channels, num_classes)
-
-    def forward(self, x, lengths, B):
-        # x: (B, 29, C)
-        # masks = make_non_pad_mask(lengths)
-        x = x.permute(1, 0, 2)
-        # x = self.pos_enc(x)
-        x = self.encoder(x)
-        x = x.mean(0)
-        x = self.tf_output(x)
-        return x
-
-
 class PositionalEncoding(nn.Module):
     def __init__(self,
                  emb_size: int,
@@ -145,13 +126,6 @@ class Lipreading(nn.Module):
                 self.frontend_nout = 64
                 self.backend_out = 512
                 self.trunk = ResNet(BasicBlock, [2, 2, 2, 2], relu_type=relu_type)
-            elif self.backbone_type == 'shufflenet':
-                assert width_mult in [0.5, 1.0, 1.5, 2.0], "Width multiplier not correct"
-                shufflenet = ShuffleNetV2( input_size=96, width_mult=width_mult)
-                self.trunk = nn.Sequential( shufflenet.features, shufflenet.conv_last, shufflenet.globalpool)
-                self.frontend_nout = 24
-                self.backend_out = 1024 if width_mult != 2.0 else 2048
-                self.stage_out_channels = shufflenet.stage_out_channels[-1]
 
             # -- frontend3D
             if relu_type == 'relu':
@@ -192,9 +166,7 @@ class Lipreading(nn.Module):
                                   squeeze_excitation=densetcn_options['squeeze_excitation'],
                                 )
         else:
-            self.tcn = TransformerBackend(input_size=self.backend_out, num_channels=512, num_classes=num_classes)
-        # else:
-        #     raise NotImplementedError
+            raise NotImplementedError
 
         # -- initialize
         self._initialize_weights_randomly()
@@ -203,21 +175,15 @@ class Lipreading(nn.Module):
         if self.modality == 'video':
             B, C, T, H, W = x.size()
             x = self.frontend3D(x)
-            Tnew = x.shape[2]    # outpu should be B x C2 x Tnew x H x W
+            Tnew = x.shape[2]    # output should be B x C2 x Tnew x H x W
             x = threeD_to_2D_tensor(x)
             x = self.trunk(x)
-
-            if self.backbone_type == 'shufflenet':
-                x = x.view(-1, self.stage_out_channels)
             x = x.view(B, Tnew, x.size(1))
         elif self.modality == 'audio':
             B, C, T = x.size()
             x = self.trunk(x)
             x = x.transpose(1, 2)
             lengths = [_//640 for _ in lengths]
-        # if self.extract_feats:
-        #     return x
-        # -- duration
         if self.use_boundary:
             x = torch.cat([x, boundaries], dim=-1)
 
